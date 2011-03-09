@@ -11,9 +11,6 @@ my( $css, @structure, $output );
 
 # cursors
 {
-    $css = <<CSS;
-a{cursor:url(blah.gif) crosshair;}
-CSS
     @structure = (
             {
                 selectors => [ 'a' ],
@@ -23,6 +20,10 @@ CSS
             },
         );
     
+    $css = <<CSS;
+a{cursor:url(blah.gif) crosshair;}
+CSS
+
     $output = $preparer_concise->output_as_string( @structure );
     ok( $output eq $css )
         or say "cursor was:\n" . $output;

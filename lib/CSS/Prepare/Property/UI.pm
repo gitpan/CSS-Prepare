@@ -9,6 +9,7 @@ use CSS::Prepare::Property::Values;
 sub parse {
     my $self        = shift;
     my $has_hack    = shift;
+    my $location    = shift;
     my %declaration = @_;
     
     my $property = $declaration{'property'};
@@ -66,6 +67,14 @@ sub parse {
             unless %canonical;
     }
     
+    if ( defined $canonical{'cursor'} ) {
+        $canonical{'cursor'} = shorten_url_value(
+                $canonical{'cursor'},
+                $location,
+                $self,
+            );
+    }
+    
     return \%canonical, \@errors;
 }
 sub output {
@@ -81,6 +90,7 @@ sub output {
     
     foreach my $property ( @outline_properties ) {
         my $value = $block->{ $property };
+        
         $value = shorten_colour_value( $value )
             if 'outline-color' eq $property;
         
@@ -100,7 +110,10 @@ sub output {
         push @output, @outline;
     }
     
-    push @output, sprintf $self->output_format, 'cursor:', $block->{'cursor'}
+    push @output,
+        sprintf( $self->output_format,
+            'cursor:', $block->{'cursor'},
+        )
         if defined $block->{'cursor'};
     
     return @output;

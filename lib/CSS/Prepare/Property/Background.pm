@@ -10,6 +10,7 @@ use CSS::Prepare::Property::Values;
 sub parse {
     my $self        = shift;
     my $has_hack    = shift;
+    my $location    = shift;
     my %declaration = @_;
     
     my $property = $declaration{'property'};
@@ -71,6 +72,14 @@ sub parse {
             unless %canonical;
     }
     
+    if ( defined $canonical{'background-image'} ) {
+        $canonical{'background-image'} = shorten_url_value(
+                $canonical{'background-image'},
+                $location,
+                $self,
+            );
+    }
+    
     return \%canonical, \@errors;
 }
 
@@ -115,8 +124,11 @@ sub output {
 sub shorten_background_position_value {
     my $value = shift;
     
-    return unless defined $value;
+    return
+        unless defined $value;
     
+    # CSS2.1 14.2.1: "If only one value is specified, the second value
+    # is assumed to be ’center’."
     $value =~ s{(.+) \s+ (?: center | 50\% ) $}{$1}x;
     return $value;
 }

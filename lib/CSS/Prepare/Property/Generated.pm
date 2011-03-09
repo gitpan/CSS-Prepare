@@ -9,6 +9,7 @@ use CSS::Prepare::Property::Values;
 sub parse {
     my $self        = shift;
     my $has_hack    = shift;
+    my $location    = shift;
     my %declaration = @_;
     
     my $property = $declaration{'property'};
@@ -72,6 +73,14 @@ sub parse {
                 error => "invalid list-style property: '${value}'"
             }
             unless %canonical;
+    }
+    
+    if ( defined $canonical{'list-style-image'} ) {
+        $canonical{'list-style-image'} = shorten_url_value(
+                $canonical{'list-style-image'},
+                $location,
+                $self,
+            );
     }
     
     return \%canonical, \@errors;

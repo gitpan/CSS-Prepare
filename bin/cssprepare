@@ -1,5 +1,4 @@
 #!/usr/bin/env perl
-# -*- Mode: Bash; tab-width: 4; indent-tabs-mode: nil; -*-
 
 use Modern::Perl;
 
@@ -10,7 +9,30 @@ use Getopt::Long    qw( :config bundling );
 use IO::Handle;
 use POSIX           qw( mkfifo );
 use Pod::Usage;
+use Term::ANSIColor;
 use Time::HiRes     qw( gettimeofday tv_interval );
+
+# FIXME - update POD with changes to script
+use constant OPTIONS => qw(
+              use-all-shasum|a
+              hierarchy-base|b=s
+                  output-dir|d=s
+             extended-syntax|e
+               disable-hacks
+                        help|h
+                    location|l=s
+               assets-output|m=s
+                 assets-base|n=s
+                    optimise|o
+                        pipe=s
+                      pretty|p
+                       quiet|q
+                      server
+        suboptimal-threshold|s=i
+                     timeout|t=i
+               warnings-only|w
+               exit-on-error|x
+    );
 
 
 
@@ -27,7 +49,7 @@ elsif ( $options{'pipe'} ) {
 }
 else {
     foreach my $stylesheet ( @ARGV ) {
-        my ( $processed, $saving, $error_count )
+        my ( $processed, $saving, $error_count, $not_cached )
             = process_stylesheet( $stylesheet );
 
         $total_saving += $saving;
@@ -58,40 +80,40 @@ exit;
 sub run_server {
     my @args = @_;
     
-    # eval {
-    #     use Plack::Runner;
-    #     use Plack::Request;
-    # };
-    # 
-    # my $runner = Plack::Runner->new();
-    # $runner->parse_options( @args );
-    # 
-    # my $preparer = sub {
-    #     my $env = shift;
-    #     my $req = Plack::Request->new( $env );
-    #     
-    #     my( $output, $total_saving, $total_errors );
-    #     
-    #     return [ 404, [], [] ]
-    #         unless $req->path_info eq '/';
-    #     
-    #     foreach my $stylesheet ( @args ) {
-    #         my ( $processed, $saving, $error_count )
-    #             = process_stylesheet( $stylesheet );
-    #         
-    #         $total_saving += $saving;
-    #         $total_errors += $error_count;
-    #         $output       .= $processed;
-    #     }
-    #     
-    #     return [
-    #             200,
-    #             [ 'Content-Type' => 'text/css' ],
-    #             [ $output ]
-    #         ];
-    # };
-    # 
-    # $runner->run( $preparer );
+    eval {
+        use Plack::Runner;
+        use Plack::Request;
+    };
+    
+    my $runner = Plack::Runner->new();
+    $runner->parse_options( @args );
+    
+    my $preparer = sub {
+        my $env = shift;
+        my $req = Plack::Request->new( $env );
+        
+        my( $output, $total_saving, $total_errors );
+        
+        return [ 404, [], [] ]
+            unless $req->path_info eq '/';
+        
+        foreach my $stylesheet ( @args ) {
+            my ( $processed, $saving, $error_count, $not_cached )
+                = process_stylesheet( $stylesheet );
+            
+            $total_saving += $saving;
+            $total_errors += $error_count;
+            $output       .= $processed;
+        }
+        
+        return [
+                200,
+                [ 'Content-Type' => 'text/css' ],
+                [ $output ]
+            ];
+    };
+    
+    $runner->run( $preparer );
 }
 
 sub run_pipe {
@@ -115,10 +137,6 @@ sub run_pipe {
             status( "Re-opened pipe ${pipe_name}" );
         }
         
-        # TODO -- neaten up the status and make errors much clearer
-        #      -- provide option to shut up "Found n decs/took" status
-        status( "\n-- Ready for request" );
-        
         my $pipe;
         my $output;
         
@@ -127,25 +145,37 @@ sub run_pipe {
         open( $pipe, '>', $pipe_name )
             or die "Cannot write to ${pipe_name}: $!";
         
-        foreach my $stylesheet ( @args ) {
-            my ( $processed, $saving, $error_count )
+        my @files;
+        foreach my $arg ( @args ) {
+            if ( -d $arg ) {
+                push @files, get_files_in_directory( $arg );
+            }
+            else {
+                push @files, $arg;
+            }
+        }
+        
+        our $updates = 0;
+        foreach my $stylesheet ( @files ) {
+            my ( $processed, $saving, $error_count, $not_cached )
                 = process_stylesheet( $stylesheet );
             
             $total_saving += $saving;
             $total_errors += $error_count;
             $output       .= $processed;
+            $updates      += $not_cached;
         }
-        
-        # TODO -- include optional block if errors occur (eg. style page red)
         
         print {$pipe} $output;
         close $pipe;
         
-        # touch the pipe to confound anything caching based upon the mtime
-        utime undef, undef, $pipe;
+        status('') if $updates;
         
         # avoid dup signals
-        sleep 1;
+        select undef, undef, undef, 0.1;
+        
+        # touch the pipe to confound anything caching based upon the mtime
+        utime undef, undef, $pipe;
     }
 }
 
@@ -156,13 +186,12 @@ sub process_stylesheet {
         unless defined $cache{ $stylesheet };
     my $cache = $cache{ $stylesheet };
     
-    my $stat = stat $stylesheet;
-    my $timestamp = $stat->mtime;
+    my $stat        = stat $stylesheet;
+    my $timestamp   = $stat->mtime;
+    my $recalculate = $timestamp != $cache->{'timestamp'}
+                      || $cache->{'error_count'};
     
-    if ( $timestamp == $cache->{'timestamp'} ) {
-        status( "Using cached values for '$stylesheet'" );
-    }
-    else {
+    if ( $recalculate ) {
         my $start = [ gettimeofday() ];
         status( "Processing stylesheet '$stylesheet'" );
         
@@ -180,7 +209,11 @@ sub process_stylesheet {
                              : '';
                 my( $level, $text ) = each %$error;
                 
-                status( "  [${level}] '${selector}' - ${text}" );
+                status(
+                        "  [${level}] '${selector}' - ${text}",
+                        0,
+                        'bold red'
+                    );
                 $cache->{'error_count'}++;
             }
         }
@@ -201,6 +234,7 @@ sub process_stylesheet {
         $cache->{'output'},
         $cache->{'saving'},
         $cache->{'error_count'},
+        $recalculate,
     );
 }
 sub output_stylesheet_to_directory {
@@ -223,33 +257,47 @@ sub output_stylesheet_to_directory {
     
     return $filename;
 }
+sub get_files_in_directory {
+    my $directory = shift;
+    
+    opendir my $handle, $directory
+        or return;
+    
+    my @files;
+    my @directories;
+    while ( my $entry = readdir $handle ) {
+        next if $entry =~ m{^\.};
+        
+        my $target = "$directory/$entry";
+        
+        push( @files, $target )
+            if -f $target && $target =~ m{\.css$};
+        push( @directories, $target ) if -d $target;
+    }
+    closedir $handle;
+    
+    foreach my $dir ( @directories ) {
+        my @subfiles;
+        
+        foreach my $file ( get_files_in_directory( $dir ) ) {
+            push @subfiles, $file;
+        }
+        
+        @files = ( @subfiles, @files );
+    }
+    
+    return @files;
+}
+
 
 sub get_options_or_exit {
-    use constant OPTIONS => qw( 
-                  use-all-shasum|a
-                  hierarchy-base|b=s
-                      output-dir|d=s
-                 extended-syntax|e
-                   disable-hacks|h
-                        location|l=s
-                        optimise|o
-                            pipe=s
-                          pretty|p
-                           quiet|q
-                          server
-            suboptimal-threshold|s=i
-                         timeout|t=i
-                   warnings-only|w
-                   exit-on-error|x
-        );
-    
     my %getopts;
     
     my $known = GetOptions( \%getopts, OPTIONS );
-    pod2usage()
-        unless $known or $getopts{'help'};
+    my $usage = ! $known || $getopts{'help'};
     
     if ( $getopts{'output-dir'} ) {
+        # FIXME
         eval {
                 require Digest::SHA1;
                 Digest::SHA1->import( 'sha1_base64' );
@@ -258,6 +306,8 @@ sub get_options_or_exit {
              . "module 'Digest::SHA1' to be installed." )
                 if $@;
     }
+    
+    pod2usage() if $usage;
     
     return %getopts;
 }
@@ -277,21 +327,26 @@ sub get_prepare_arguments {
         if defined $getopts{'timeout'};
     $args{'suboptimal_threshold'} = $getopts{'suboptimal-threshold'}
         if defined $getopts{'suboptimal-threshold'};
+    $args{'assets_output'} = $getopts{'assets-output'}
+        if defined $getopts{'assets-output'};
+    $args{'assets_base'} = $getopts{'assets-base'}
+        if defined $getopts{'assets-base'};
     $args{'status'} = \&status;
     
     return %args;
 }
 
 sub status {
-    my $text = shift;
-    my $temp = shift;
+    my $text   = shift;
+    my $temp   = shift;
+    my $colour = shift // '';
     
     if ( !defined $options{'quiet'} ) {
         STDERR->autoflush(1);
-        print STDERR
-            ( $temp ? "\r" : '' )
-            . $text
-            . ( $temp ? '' : "\n" );
+        my $output = ( $temp ? "\r" : '' )
+                     . $text
+                     . ( $temp ? '' : "\n" );
+        print STDERR colored( $output, $colour );
     }
 }
 
