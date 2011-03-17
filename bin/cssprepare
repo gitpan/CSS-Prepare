@@ -12,7 +12,8 @@ use Pod::Usage;
 use Term::ANSIColor;
 use Time::HiRes     qw( gettimeofday tv_interval );
 
-# FIXME - update POD with changes to script
+# FIXME - needs location option to be location
+# TODO  - --pipe should use --location as it's argument
 use constant OPTIONS => qw(
               use-all-shasum|a
               hierarchy-base|b=s
@@ -81,8 +82,8 @@ sub run_server {
     my @args = @_;
     
     eval {
-        use Plack::Runner;
-        use Plack::Request;
+        require Plack::Runner;
+        require Plack::Request;
     };
     
     my $runner = Plack::Runner->new();
@@ -297,7 +298,6 @@ sub get_options_or_exit {
     my $usage = ! $known || $getopts{'help'};
     
     if ( $getopts{'output-dir'} ) {
-        # FIXME
         eval {
                 require Digest::SHA1;
                 Digest::SHA1->import( 'sha1_base64' );
@@ -319,6 +319,8 @@ sub get_prepare_arguments {
         if defined $getopts{'extended-syntax'};
     $args{'pretty'} = 1
         if defined $getopts{'pretty'};
+    $args{'location'} = 1
+        if defined $getopts{'location'};
     $args{'hacks'} = 0
         if defined $getopts{'disable-hacks'};
     $args{'base_directory'} = $getopts{'hierarchy-base'}

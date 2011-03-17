@@ -12,12 +12,16 @@ my( $css, @structure, $output );
 {
     @structure = (
             {
+                original  => ' counter-increment: section; ',
+                errors    => [],
                 selectors => [ 'div' ],
                 block     => { 
                     'counter-increment' => 'section', 
                 },
             },
             {
+                original  => ' counter-reset: list; ',
+                errors    => [],
                 selectors => [ 'ol' ],
                 block     => { 
                     'counter-reset' => 'list', 
@@ -49,12 +53,16 @@ CSS
 {
     @structure = (
             {
+                original  => ' counter-increment: section; ',
+                errors    => [],
                 selectors => [ 'div' ],
                 block     => {
                     'important-counter-increment' => 'section',
                 },
             },
             {
+                original  => ' counter-reset: list; ',
+                errors    => [],
                 selectors => [ 'ol' ],
                 block     => {
                     'counter-reset' => 'list',
@@ -88,12 +96,16 @@ CSS
 {
     @structure = (
             {
+                original  => ' counter-increment: section 2; ',
+                errors    => [],
                 selectors => [ 'div' ],
                 block     => { 
                     'counter-increment' => 'section 2', 
                 },
             },
             {
+                original  => ' counter-reset: list; ',
+                errors    => [],
                 selectors => [ 'ol' ],
                 block     => { 
                     'counter-reset' => 'list', 
@@ -127,6 +139,8 @@ CSS
 {
     @structure = (
             {
+                original  => q( quotes: '“' '”'; ),
+                errors    => [],
                 selectors => [ 'q' ],
                 block     => { 
                     'quotes' => q('“' '”'), 
@@ -156,6 +170,8 @@ CSS
 {
     @structure = (
             {
+                original  => q( quotes: '“' '”' "'" "'"; ),
+                errors    => [],
                 selectors => [ 'q' ],
                 block     => { 
                     'quotes' => q('“' '”' "'" "'"), 
@@ -185,6 +201,8 @@ CSS
 {
     @structure = (
             {
+                original  => q( content: "“"; ),
+                errors    => [],
                 selectors => [ 'blockquote:before' ],
                 block     => { 
                     'content' => q("“"), 
@@ -213,6 +231,8 @@ CSS
 {
     @structure = (
             {
+                original  => ' list-style-type: armenian; ',
+                errors    => [],
                 selectors => [ 'li' ],
                 block     => { 
                     'list-style-type' => 'armenian', 
@@ -239,6 +259,8 @@ CSS
 {
     @structure = (
             {
+                original  => ' list-style-image: url( "dot.gif" ); ',
+                errors    => [],
                 selectors => [ 'li' ],
                 block     => {
                     'list-style-image' => 'url(dot.gif)',
@@ -265,6 +287,8 @@ CSS
 {
     @structure = (
             {
+                original  => ' list-style-position: outside; ',
+                errors    => [],
                 selectors => [ 'li' ],
                 block     => { 
                     'list-style-position' => 'outside', 
@@ -293,6 +317,8 @@ CSS
 {
     @structure = (
             {
+                original  => ' list-style: disc url(dot.gif) inside; ',
+                errors    => [],
                 selectors => [ 'li' ],
                 block     => { 
                     'list-style-type'     => 'disc', 
@@ -324,6 +350,8 @@ CSS
 {
     @structure = (
             {
+                original  => ' list-style: inside lower-alpha; ',
+                errors    => [],
                 selectors => [ 'li' ],
                 block     => { 
                     'list-style-type'     => 'lower-alpha',
@@ -353,6 +381,8 @@ CSS
 {
     @structure = (
             {
+                original  => ' list-style: outside; ',
+                errors    => [],
                 selectors => [ 'li' ],
                 block     => { 
                     'list-style-type'     => '', 
