@@ -17,6 +17,7 @@ use Time::HiRes     qw( gettimeofday tv_interval );
 use constant OPTIONS => qw(
               use-all-shasum|a
               hierarchy-base|b=s
+                cache-output|c=s
                   output-dir|d=s
              extended-syntax|e
                disable-hacks
@@ -319,7 +320,7 @@ sub get_prepare_arguments {
         if defined $getopts{'extended-syntax'};
     $args{'pretty'} = 1
         if defined $getopts{'pretty'};
-    $args{'location'} = 1
+    $args{'location'} = $getopts{'location'}
         if defined $getopts{'location'};
     $args{'hacks'} = 0
         if defined $getopts{'disable-hacks'};
