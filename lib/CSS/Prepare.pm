@@ -27,7 +27,7 @@ use List::Util          qw( first );
 use Storable            qw( dclone );
 
 use version;
-our $VERSION = qv( 0.9.2.1 );
+our $VERSION = qv( 0.9.2.2 );
 
 use constant MAX_REDIRECT       => 3;
 use constant RE_IS_URL          => qr{^ http s? : // }x;
@@ -743,78 +743,6 @@ sub parse_rule_sets {
     }
     
     return \@rule_sets, \@appended;
-}
-sub strip_charset {
-    my $string = shift;
-    
-    # "User agents must support at least the UTF-8 encoding."
-    my $charset = "UTF-8";
-    
-    # "Authors using an @charset rule must place the rule at the very beginning 
-    #  of the style sheet, preceded by no characters"
-    if ( $string =~ s{^ \@charset \s " ([^"]+) "; }{}sx ) {
-        $charset = $1;
-    }
-    
-    return ( $charset, $string );
-}
-sub strip_comments {
-    my $self   = shift;
-    my $string = shift;
-    
-    # remove CDO/CDC markers
-    $string =~ s{ <!-- }{}gsx;
-    $string =~ s{ --> }{}gsx;
-    
-    if ( $self->support_extended_syntax ) {
-        # remove line-level comments
-        $string =~ s{ (?: ^ | \s ) // [^\n]* $ }{}gmx;
-    }
-    
-    # disguise verbatim comments
-    $string =~ s{
-            \/ \* \! ( .*? ) \* \/
-        }{%-COMMENT-%$1%-ENDCOMMENT-%}gsx;
-    
-    # disguise boundary markers
-    $string =~ s{
-            \/ \* ( \s+ \-\-+ \s+ ) \* \/
-        }{%-COMMENT-%$1%-ENDCOMMENT-%}gsx;
-    
-    # remove CSS comments
-    $string =~ s{ \/ \* .*? \* \/ }{}gsx;
-    
-    # reveal verbatim comments and boundary markers
-    $string =~ s{%-COMMENT-%}{/*}gsx;
-    $string =~ s{%-ENDCOMMENT-%}{*/}gsx;
-    
-    return $string;
-}
-sub escape_braces_in_strings {
-    my $string = shift;
-    
-    my $strip_next_string = qr{
-            ^
-            ( .*?  )        # $1: everything before the string
-            ( ['"] )        # $2: the string delimiter
-            ( .*?  )        # $3: the content of the string
-            (?<! \\ ) \2    # the string delimiter (but not escaped ones)
-        }sx;
-    
-    # find all strings, and tokenise the braces within
-    my $return;
-    while ( $string =~ s{$strip_next_string}{}sx ) {
-        my $before  = $1;
-        my $delim   = $2;
-        my $content = $3;
-        
-        $content =~ s{ \{ }{\%-LEFTBRACE-\%}gsx;
-        $content =~ s{ \} }{\%-RIGHTBRACE-\%}gsx;
-        $return .= "${before}${delim}${content}${delim}";
-    }
-    $return .= $string;
-    
-    return $return;
 }
 sub unescape_braces {
     my $string = shift;
