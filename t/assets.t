@@ -131,11 +131,6 @@ CSS
     ok( $output eq $expect );
 }
 
-# FIXME - test missing asset files not being rewritten
-#       - remove undef errors
-#       - examine carefully what happens on the optimise pass of CSS
-#       - make sure that absolute URLs are not munged
-
 
 
 sub compare {

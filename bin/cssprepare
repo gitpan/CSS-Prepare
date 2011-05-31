@@ -13,8 +13,6 @@ use Term::ANSIColor;
 use Time::HiRes     qw( gettimeofday tv_interval );
 use Storable        qw( retrieve nstore );
 
-# FIXME - needs location option to be location
-# TODO  - --pipe should use --location as it's argument
 use constant OPTIONS => qw(
               use-all-shasum|a
               hierarchy-base|b=s

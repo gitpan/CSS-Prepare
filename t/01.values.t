@@ -4,6 +4,21 @@ use Test::More  tests => 478;
 use CSS::Prepare::Property::Values;
 
 
+# test colours
+{
+    my @valid_colour_values = ( 'red', '#fff', '#FFF', '#FFFFFF' );
+    foreach my $value ( @valid_colour_values ) {
+        ok( is_colour_value( $value ),
+            "colour: '$value'" );
+    }
+
+    my @invalid_colour_values = ( '#c', '#cccc', '#hbhbhb', 'hotpink' );
+    foreach my $value ( @invalid_colour_values ) {
+        ok( ! is_colour_value( $value ),
+            "not colour: '$value'" );
+    }
+}
+
 # test numerical values
 {
     my @invalid_zero_values = qw( -0 +0 );
@@ -11,10 +26,28 @@ use CSS::Prepare::Property::Values;
         ok( ! is_length_value( $value ),
             "invalid zero: '$value'" );
     }
+
+    my @valid_length_values
+        = qw( 0 +0px 5px .5em 10.0001em 15ex 20in 25cm 30mm 35pt 40pc );
+    foreach my $value ( @valid_length_values ) {
+        ok( is_length_value( $value ),
+            "length: '$value'" );
+        ok( ! is_percentage_value( $value ),
+            "not percentage: '$value'" );
+    }
+
+    my @valid_percentage_values = qw( 0.254338% +150% -5% );
+    foreach my $value ( @valid_percentage_values ) {
+        ok( is_percentage_value( $value ),
+            "percentage: '$value'" );
+        ok( ! is_length_value( $value ),
+            "not length: '$value'" );
+    }
 }
 
 # test strings
 {
+    my @strings = ( '"hello"', q('hello'), qq('that\\'s mine'), qq("\\"") );
     foreach my $value ( @strings ) {
         ok( is_string_value( $value ),
             "string: ($value)" );
@@ -26,6 +59,13 @@ use CSS::Prepare::Property::Values;
 # test url values
 {
     # co-incidentally also tests string values
+    my @valid_url_values = (
+            'url(blah.gif)',
+            'url( blah\).gif )',
+            'url( http://www.example.com/blah.gif )',
+            q(url( 'bob.gif' )),
+            'url( "https://secure.example.com/blah.gif" )',
+        );
     foreach my $value ( @valid_url_values ) {
         ok( is_url_value( $value ),
             "url: '$value'" );

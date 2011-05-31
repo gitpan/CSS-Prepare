@@ -20,8 +20,6 @@ my $preparer = CSS::Prepare->new(
         assets_output => $option{'assets-output'},
     );
 
-# FIXME - traverse directories as well
-# TODO  - option for "short filenames" - sha1 truncated to 12 chars?
 foreach my $arg ( @ARGV ) {
     my $output = $preparer->copy_file_to_staging( $arg );
     say $output
