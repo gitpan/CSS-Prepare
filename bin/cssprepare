@@ -308,7 +308,7 @@ sub get_files_in_directory {
         @files = ( @subfiles, @files );
     }
     
-    return @files;
+    return sort @files;
 }
 
 
